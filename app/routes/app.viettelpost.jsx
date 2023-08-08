@@ -9,18 +9,16 @@ import {
   VerticalStack,
 } from "@shopify/polaris";
 
-export default function AdditionalPage() {
+export default function CreateViettelPost() {
   return (
     <Page>
-      <ui-title-bar title="Additional page" />
+      <ui-title-bar title="Create Viettel Post" />
       <Layout>
         <Layout.Section>
           <Card>
             <VerticalStack gap="3">
               <Text as="p" variant="bodyMd">
-                The app template comes with an additional page which
-                demonstrates how to create multiple pages within app navigation
-                using{" "}
+                
                 <Link
                   url="https://shopify.dev/docs/apps/tools/app-bridge"
                   target="_blank"
