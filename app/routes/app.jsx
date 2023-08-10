@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { json } from "@remix-run/node";
 import { Link, Outlet, useLoaderData, useRouteError } from "@remix-run/react";
 import { AppProvider as PolarisAppProvider } from "@shopify/polaris";
@@ -20,7 +20,6 @@ export async function loader({ request }) {
 
 export default function App() {
   const { apiKey, polarisTranslations } = useLoaderData();
-
   return (
     <>
       <script
@@ -32,6 +31,7 @@ export default function App() {
           Home
         </Link>
         <Link to="/app/viettelpost">Viettel Post Pages</Link>
+        <Link to="/app/login">Login</Link>
       </ui-nav-menu>
       <PolarisAppProvider
         i18n={polarisTranslations}
