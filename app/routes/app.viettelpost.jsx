@@ -7,6 +7,8 @@ import {
   Page,
   Text,
   VerticalStack,
+  FormLayout, 
+  TextField
 } from "@shopify/polaris";
 
 export default function CreateViettelPost() {
@@ -16,43 +18,25 @@ export default function CreateViettelPost() {
       <Layout>
         <Layout.Section>
           <Card>
-            <VerticalStack gap="3">
-              <Text as="p" variant="bodyMd">
-                
-                <Link
-                  url="https://shopify.dev/docs/apps/tools/app-bridge"
-                  target="_blank"
-                >
-                  App Bridge
-                </Link>
-                .
-              </Text>
-              <Text as="p" variant="bodyMd">
-                To create your own page and have it show up in the app
-                navigation, add a page inside <Code>app/routes</Code>, and a
-                link to it in the <Code>&lt;ui-nav-menu&gt;</Code> component
-                found in <Code>app/routes/app.jsx</Code>.
-              </Text>
-            </VerticalStack>
-          </Card>
-        </Layout.Section>
-        <Layout.Section secondary>
-          <Card>
-            <VerticalStack gap="2">
-              <Text as="h2" variant="headingMd">
-                Resources
-              </Text>
-              <List spacing="extraTight">
-                <List.Item>
-                  <Link
-                    url="https://shopify.dev/docs/apps/design-guidelines/navigation#app-nav"
-                    target="_blank"
-                  >
-                    App nav best practices
-                  </Link>
-                </List.Item>
-              </List>
-            </VerticalStack>
+            <FormLayout>
+              <TextField
+                label="Store name"
+                onChange={() => {}}
+                autoComplete="off"
+              />
+              <TextField
+                type="email"
+                label="Account email"
+                onChange={() => {}}
+                autoComplete="email"
+              />
+              <TextField
+                type="email"
+                label="Account email"
+                onChange={() => {}}
+                autoComplete="email"
+              />
+            </FormLayout>
           </Card>
         </Layout.Section>
       </Layout>

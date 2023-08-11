@@ -16,11 +16,11 @@ export default function CreateViettelPost() {
     setPassword(value);
   };
 
-  useEffect(() => {
-    console.log("Token=>", token);
-    // localStorage.setItem("token", token);
-    // window.location.href = "/app";
-  }, [token]);
+  // useEffect(() => {
+  //   console.log("Token=>", token);
+  //   // localStorage.setItem("token", token);
+  //   // window.location.href = "/app";
+  // }, [token]);
   const handleLogin = async () => {
     try {
         const rawData = {
@@ -38,7 +38,13 @@ export default function CreateViettelPost() {
         }
       );
 
-      setToken(loginResponse.data.data.token);
+      // setToken(loginResponse.data.data.token);
+      if(loginResponse.data.data.token!==''){
+        console.log("Token=>", loginResponse.data.data.token);
+        localStorage.setItem("token", loginResponse.data.data.token);
+        // window.location.href = "./";
+      }
+
     } catch (error) {
       console.log("Error:", error);
     }
