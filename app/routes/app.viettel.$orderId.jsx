@@ -12,6 +12,7 @@ import {
   DatePicker,
   Select,
   RadioButton,
+  Divider,
 } from "@shopify/polaris";
 import {
   useParams,
@@ -223,6 +224,19 @@ export default function CreateViettelPost() {
   const [selectedWardReceive, setSelectedWardReceive] = useState("1");
   const [optionsWardReceive, setOptionsWardReceive] = useState([]);
 
+  const [valueProductType, setValueProductType] = useState("buukien");
+
+  const [listProductsItem, setListProductsItem] = useState([
+    {
+      name: "",
+      quan: 0,
+      weight: 0,
+      price: 0,
+    },
+  ]);
+  const [totalQuantity, setTotalQuantity] = useState(0);
+  const [totalWeight, setTotalWeight] = useState(0);
+  const [totalPrice, setTotalPrice] = useState(0);
   const [{ month, year }, setDate] = useState({
     month: new Date().getMonth(),
     year: new Date().getFullYear(),
@@ -323,6 +337,68 @@ export default function CreateViettelPost() {
     getWardsReceiver().catch(console.error);
   }, [selectedDistrictReceive]);
 
+  useEffect(() => {
+    if (
+      selectedDistrictSender &&
+      selectedProvinceSender &&
+      selectedDistrictReceive &&
+      selectedProvinceReceive &&
+      valueProductType &&
+      totalWeight &&
+      totalPrice
+    ) {
+      const getServiceListMatch = async () => {
+        const responseServiceList = await axios.post(
+          `https://cors-anywhere.herokuapp.com/https://partner.viettelpost.vn/v2/order/getPriceAll`,
+          {
+            SENDER_DISTRICT: selectedDistrictSender,
+            SENDER_PROVINCE: selectedProvinceSender,
+            RECEIVER_DISTRICT: selectedDistrictReceive,
+            RECEIVER_PROVINCE: selectedProvinceReceive,
+            PRODUCT_TYPE: valueProductType === "tailieu" ? "TH" : "HH",
+            PRODUCT_WEIGHT: totalWeight,
+            PRODUCT_PRICE: totalPrice,
+            MONEY_COLLECTION: "5000000",
+            PRODUCT_LENGTH: 0,
+            PRODUCT_WIDTH: 0,
+            PRODUCT_HEIGHT: 0,
+            TYPE: 1,
+          },
+          {
+            headers: {
+              "Content-Type": "application/json",
+              Token:
+                "eyJhbGciOiJFUzI1NiJ9.eyJzdWIiOiIwMzI2MTIzMzk3IiwiVXNlcklkIjoxMzEzNTAyMCwiRnJvbVNvdXJjZSI6NSwiVG9rZW4iOiJPNjNZT1hDQ1ZLQk9SNEdOUEoiLCJleHAiOjE2OTIxNjc1NzYsIlBhcnRuZXIiOjEzMTM1MDIwfQ.yswXUTsUmLN3YK7mvNFVHX5ViP-eGIq2JZs14_DcHMGMaUJZjDj8QNjhowxVTZYQD5PhppmCE06U3W7QjBVCjQ",
+              // Cookie: "SERVERID=A"
+            },
+          }
+        );
+        console.log("Service List==>", responseServiceList);
+        if (!responseServiceList.data.error) {
+          // setOptionsWardReceive(
+          //   responseServiceList.data.data?.map((value) => {
+          //     return {
+          //       label: value.WARDS_NAME,
+          //       value: value.WARDS_ID.toString(),
+          //     };
+          //   })
+          // );
+        } else {
+          responseServiceList.data.message;
+        }
+      };
+      getServiceListMatch().catch(console.error);
+    }
+  }, [
+    selectedDistrictSender,
+    selectedProvinceSender,
+    selectedDistrictReceive,
+    selectedProvinceReceive,
+    valueProductType,
+    totalWeight,
+    totalPrice,
+  ]);
+
   const handleSelectChangeProvinceSender = useCallback(
     (value) => setSelectedProvinceSender(value),
     []
@@ -403,12 +479,25 @@ export default function CreateViettelPost() {
 
     return formattedDate;
   }
-  const [valueProductType, setValueProductType] = useState("buukien");
 
   const handleChangeProductType = useCallback(
     (_, newValue) => setValueProductType(newValue),
     []
   );
+
+  useEffect(() => {
+    let totalQuan = 0;
+    let totalWeight = 0;
+    let totalPrice = 0;
+    listProductsItem.forEach((value) => {
+      totalQuan += value.quan;
+      totalWeight += value.weight;
+      totalPrice += value.price;
+    });
+    setTotalQuantity(totalQuan);
+    setTotalWeight(totalWeight);
+    setTotalPrice(totalPrice);
+  }, [listProductsItem]);
   console.log("date post==>", {
     ORDER_NUMBER: params.orderId,
     GROUPADDRESS_ID: 0,
@@ -454,12 +543,12 @@ export default function CreateViettelPost() {
     EXPECTED_DELIVERY_DATE: formatDate(selectedDates.end),
     PRODUCT_NAME: "Máy xay sinh tố Philips HR2118 2.0L ",
     PRODUCT_DESCRIPTION: "Máy xay sinh tố Philips HR2118 2.0L ",
-    PRODUCT_QUANTITY: 1,
-    PRODUCT_PRICE: 2292764,
-    PRODUCT_WEIGHT: 40000,
-    PRODUCT_LENGTH: 38,
-    PRODUCT_WIDTH: 24,
-    PRODUCT_HEIGHT: 25,
+    PRODUCT_QUANTITY: totalQuantity,
+    PRODUCT_PRICE: totalPrice,
+    PRODUCT_WEIGHT: totalWeight,
+    PRODUCT_LENGTH: 0,
+    PRODUCT_WIDTH: 0,
+    PRODUCT_HEIGHT: 0,
     PRODUCT_TYPE: valueProductType === "tailieu" ? "TH" : "HH",
     ORDER_PAYMENT: 3,
     ORDER_SERVICE: "VCBO",
@@ -468,14 +557,14 @@ export default function CreateViettelPost() {
     ORDER_NOTE: "cho xem hàng, không cho thử",
     MONEY_COLLECTION: 2292764,
     CHECK_UNIQUE: true,
-    LIST_ITEM: [
-      {
-        PRODUCT_NAME: "Máy xay sinh tố Philips HR2118 2.0L ",
-        PRODUCT_PRICE: 2150000,
-        PRODUCT_WEIGHT: 2500,
-        PRODUCT_QUANTITY: 1,
-      },
-    ],
+    LIST_ITEM: listProductsItem.map((value) => {
+      return {
+        PRODUCT_NAME: value.name,
+        PRODUCT_PRICE: value.price,
+        PRODUCT_WEIGHT: value.weight,
+        PRODUCT_QUANTITY: value.quan,
+      };
+    }),
   });
   return (
     <Page>
@@ -692,25 +781,138 @@ export default function CreateViettelPost() {
 
                 <b>Sản phẩm:</b>
                 <FormLayout.Group>
-                  <FormLayout.Group>
-                    <label>Loại sản phẩm:</label>
-                    <RadioButton
-                      label="Bưu kiện"
-                      // helpText="Customers will only be able to check out as guests."
-                      checked={valueProductType === "buukien"}
-                      id="buukien"
-                      name="buukien"
-                      onChange={handleChangeProductType}
-                    />
-                    <RadioButton
-                      label="Tài liệu"
-                      // helpText="Customers will be able to check out with a customer account or as a guest."
-                      id="tailieu"
-                      name="tailieu"
-                      checked={valueProductType === "tailieu"}
-                      onChange={handleChangeProductType}
-                    />
-                  </FormLayout.Group>
+                  {/* <FormLayout.Group> */}
+                  <label>Loại sản phẩm:</label>
+                  <RadioButton
+                    label="Bưu kiện"
+                    // helpText="Customers will only be able to check out as guests."
+                    checked={valueProductType === "buukien"}
+                    id="buukien"
+                    name="buukien"
+                    onChange={handleChangeProductType}
+                  />
+                  <RadioButton
+                    label="Tài liệu"
+                    // helpText="Customers will be able to check out with a customer account or as a guest."
+                    id="tailieu"
+                    name="tailieu"
+                    checked={valueProductType === "tailieu"}
+                    onChange={handleChangeProductType}
+                  />
+                </FormLayout.Group>
+                <Divider />
+                <label>Items:</label>
+                {listProductsItem?.map((product, index) => {
+                  return (
+                    <>
+                      <Card>
+                        <FormLayout.Group title={`#Sản phẩm ${index + 1}:`}>
+                          <TextField
+                            label={`Tên hàng hóa:`}
+                            placeholder="Tên hàng hóa"
+                            value={product?.name}
+                            onChange={(value) => {
+                              let temp = [...listProductsItem];
+                              temp[index].name = value;
+                              setListProductsItem(temp);
+                            }}
+                            autoComplete="off"
+                          />
+                          <FormLayout.Group>
+                            <TextField
+                              label={`Số lượng:`}
+                              placeholder=""
+                              type="number"
+                              value={product?.quan.toString()}
+                              onChange={(value) => {
+                                let temp = [...listProductsItem];
+                                temp[index].quan = Number(value);
+                                setListProductsItem(temp);
+                              }}
+                              autoComplete="off"
+                            />
+                            <TextField
+                              label={`Khối lượng(g):`}
+                              placeholder="g"
+                              type="number"
+                              value={product?.weight.toString()}
+                              onChange={(value) => {
+                                let temp = [...listProductsItem];
+                                temp[index].weight = Number(value);
+                                setListProductsItem(temp);
+                              }}
+                              autoComplete="off"
+                            />
+                            <TextField
+                              label={`Giá trị(VNĐ):`}
+                              placeholder="đ"
+                              type="number"
+                              value={product?.price.toString()}
+                              onChange={(value) => {
+                                let temp = [...listProductsItem];
+                                temp[index].price = Number(value);
+                                setListProductsItem(temp);
+                              }}
+                              autoComplete="off"
+                            />
+                          </FormLayout.Group>
+                        </FormLayout.Group>
+                        <Button
+                          onClick={() => {
+                            let temp = [...listProductsItem];
+                            temp.splice(index, 1);
+                            setListProductsItem(temp);
+                            console.log("List Products", listProductsItem);
+                          }}
+                        >
+                          🗑️
+                        </Button>
+                      </Card>
+                      <br />
+                    </>
+                  );
+                })}
+                {/* </FormLayout.Group>
+                </FormLayout.Group> */}
+                <Button
+                  destructive
+                  onClick={() => {
+                    let temp = [
+                      ...listProductsItem,
+                      {
+                        name: "",
+                        quan: 0,
+                        weight: 0,
+                        price: 0,
+                      },
+                    ];
+                    setListProductsItem(temp);
+                    console.log("List Products +", listProductsItem);
+                  }}
+                >
+                  + Thêm Hàng Hóa
+                </Button>
+                <Divider />
+                <label>Sản phẩm:</label>
+                <FormLayout.Group>
+                  <TextField
+                    label="Tổng Số lượng:"
+                    value={totalQuantity.toString()}
+                    readOnly
+                    autoComplete="off"
+                  />
+                  <TextField
+                    label="Tổng Khối Lượng:"
+                    value={totalWeight.toString()}
+                    readOnly
+                    autoComplete="off"
+                  />
+                  <TextField
+                    label="Tổng Giá:"
+                    value={totalPrice.toString()}
+                    readOnly
+                    autoComplete="off"
+                  />
                 </FormLayout.Group>
                 <Button onClick={() => handleCreateOrderViettelPost()}>
                   Create Order Viettel Post
