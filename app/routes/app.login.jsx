@@ -1,50 +1,62 @@
-import { Page, FormLayout, Box } from "@shopify/polaris";
-import { useState, useEffect } from "react";
-import { json } from "@remix-run/node";
+import {
+  Page,
+  FormLayout,
+  Box,
+  TextField,
+  Button,
+  Card,
+} from "@shopify/polaris";
+import { useEffect, useState } from "react";
 import axios from "axios";
+import { Form, useActionData, useSubmit, useNavigate } from "@remix-run/react";
 
-export default function CreateViettelPost() {
+export async function action({ request }) {
+  const body = await request.formData();
+  const rawData = {
+    USERNAME: body.get("email"),
+    PASSWORD: body.get("password"),
+  };
+
+  const loginResponse = await axios.post(
+    "https://partner.viettelpost.vn/v2/user/Login",
+    rawData,
+    {
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${process.env.API_TOKEN}`,
+      },
+    }
+  );
+  return loginResponse.data;
+}
+
+export default function Login() {
+  const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+
   const [token, setToken] = useState("");
+  useEffect(() => {
+    if (token) {
+      alert("Login Success!!!");
 
-  const handleEmailChange = (value) => {
-    setEmail(value);
-  };
+      navigate("/app");
+    }
+  }, [token]);
 
-  const handlePasswordChange = (value) => {
-    setPassword(value);
-  };
-
-  // useEffect(() => {
-  //   console.log("Token=>", token);
-  //   // localStorage.setItem("token", token);
-  //   // window.location.href = "/app";
-  // }, [token]);
+  const loginResponse = useActionData();
+  const submit = useSubmit();
   const handleLogin = async () => {
     try {
-        const rawData = {
-        USERNAME: "dangkhoa@navitech.co",
-        PASSWORD: "@khoathanh1023A",
-      };
-
-      const loginResponse = await axios.post(
-        "https://cors-anywhere.herokuapp.com/https://partner.viettelpost.vn/v2/user/Login",
-        rawData,
-        {
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      // setToken(loginResponse.data.data.token);
-      if(loginResponse.data.data.token!==''){
-        console.log("Token=>", loginResponse.data.data.token);
-        localStorage.setItem("token", loginResponse.data.data.token);
-        // window.location.href = "./";
+      // submit({}, { replace: true, method: "POST" });
+      // console.log(loginResponse);
+      if (loginResponse?.error) {
+        console.log(loginResponse?.message);
+      } else {
+        console.log("Token=>", loginResponse?.data?.token);
+        setToken(loginResponse?.data?.token);
+        localStorage.setItem("token", loginResponse?.data?.token);
       }
-
     } catch (error) {
       console.log("Error:", error);
     }
@@ -53,22 +65,38 @@ export default function CreateViettelPost() {
   return (
     <Page>
       <ui-title-bar title="Login" />
-      <FormLayout>
-        <label>Email:</label>
-        <input
-          value={email}
-          onChange={(e) => handleEmailChange(e.target.value)}
-        />
-        <label>PassWord:</label>
-        <input
-          type="password"
-          value={password}
-          onChange={(e) => handlePasswordChange(e.target.value)}
-        />
-        <button variant="primary" onClick={handleLogin}>
-          Login
-        </button>
-      </FormLayout>
+      <Card>
+        <FormLayout>
+          <Form method="post" onSubmit={handleLogin}>
+            <TextField
+              label="Email:"
+              name="email"
+              placeholder="Email or Phone Number"
+              value={email}
+              type="email"
+              onChange={(value) => {
+                setEmail(value);
+              }}
+              autoComplete="off"
+            />
+            <TextField
+              label="Password:"
+              name="password"
+              placeholder="Password"
+              value={password}
+              type="password"
+              onChange={(value) => {
+                setPassword(value);
+              }}
+              autoComplete="off"
+            />
+            <br />
+            <Button submit textAlign="center" destructive>
+              Login
+            </Button>
+          </Form>
+        </FormLayout>
+      </Card>
     </Page>
   );
 }

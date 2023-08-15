@@ -1,12 +1,14 @@
 // @ts-nocheck
 import { useEffect, useState, useCallback } from "react";
-import { json } from "@remix-run/node";
+import { json, redirect } from "@remix-run/node";
 import axios from "axios";
 import {
   useActionData,
   useLoaderData,
   useNavigation,
+  useNavigate,
   useSubmit,
+  Link,
 } from "@remix-run/react";
 import {
   Page,
@@ -19,7 +21,6 @@ import {
   Box,
   Divider,
   List,
-  Link,
   Modal,
   DataTable,
   Loading,
@@ -31,10 +32,7 @@ import { authenticate } from "../shopify.server";
 export const loader = async ({ request }) => {
   const { session } = await authenticate.admin(request);
 
-  return json({ shop: session.shop.replace(".myshopify.com", "") });
-};
-
-export async function action({ request }) {
+  // return json({ shop: session.shop.replace(".myshopify.com", "") });
   const { admin } = await authenticate.admin(request);
 
   const response = await admin.graphql(
@@ -64,28 +62,84 @@ export async function action({ request }) {
 
   return json({
     orders: responseJson.data.orders.edges.map((edge) => edge.node),
+    shop: session.shop.replace(".myshopify.com", ""),
+    Authorization: `Bearer ${process.env.API_TOKEN}`,
+  });
+};
+
+export async function action({ request }) {
+  const { admin } = await authenticate.admin(request);
+  const response = await admin.graphql(
+    `#graphql
+      query {
+        orders(first: 100) {
+          edges {
+            node {
+              note
+              createdAt
+              subtotalLineItemsQuantity
+              totalPrice
+              currentSubtotalLineItemsQuantity
+              id
+              customer {
+                displayName
+                firstName
+                lastName
+              }
+            }
+          }
+        }
+      }`
+  );
+  const getFutureTimestamp = (minutes) => {
+    const currentTime = new Date().getTime();
+    const futureTime = currentTime + minutes * 60000; // 1 phút = 60000 milliseconds
+    return futureTime;
+  };
+  // const responsePrintCode = await axios.post(
+  //   "https://partner.viettelpost.vn/v2/order/printing-code",
+  //   { EXPIRY_TIME: getFutureTimestamp(2), ORDER_ARRAY: [orderVId] },
+  //   {
+  //     headers: {
+  //       accept: "*/*",
+  //       token: token,
+  //       Authorization: `Bearer ${process.env.API_TOKEN}`,
+  //     },
+  //   }
+  // );
+
+  const responseJson = await response.json();
+
+  return json({
+    orders: responseJson.data.orders.edges.map((edge) => edge.node),
   });
 }
-
 export default function Index() {
-  const [orders, setOrders] = useState([]);
+  const shopOrdersData = useLoaderData();
+  const [orders, setOrders] = useState(shopOrdersData.orders);
 
   const columns = [
-    "Number",
+    "Shopify Order.No",
     "OrderId Viettel",
-    "Date",
+    "CreatedAt",
     "Customer",
-    "Total",
+    // "Total",
     "Quantity",
-    "Print",
+    "Actions",
   ];
 
   const [token, setToken] = useState("");
+  useEffect(() => {
+    const lcToken = localStorage.getItem("token");
+    setToken(lcToken || "");
+  }, []);
+  // const [token, setToken] = useState();
 
   const [ordersV, setOrdersV] = useState({});
   const [linkPrintV, setLinkPrintV] = useState({});
   const nav = useNavigation();
-  const { shop } = useLoaderData();
+  const navigate = useNavigate();
+
   const actionData = useActionData();
   const submit = useSubmit();
 
@@ -95,6 +149,7 @@ export default function Index() {
   useEffect(() => {
     if (actionData?.orders) {
       setOrders(actionData.orders);
+
       console.log("khoa==>", orders);
     }
   }, [actionData]);
@@ -110,10 +165,16 @@ export default function Index() {
   const getOrders = () => submit({}, { replace: true, method: "POST" });
   const printViettel = (orderIdV) => {
     console.log("print=> ", orderIdV);
-    if ((token, ordersV, orderIdV)) {
-      getLinkPrintViettel(orderIdV);
+    setToken(localStorage.getItem("token"));
+    console.log("test khoa tokens", token);
+    if (!token) {
+      navigate("/app/login");
     } else {
-      console.log("no data print");
+      if ((ordersV, orderIdV)) {
+        getLinkPrintViettel(orderIdV);
+      } else {
+        console.log("no data print");
+      }
     }
   };
 
@@ -195,7 +256,7 @@ export default function Index() {
             ordersResponse?.data?.data?.ORDER_NUMBER
           );
           updateOrderNote(id, ordersResponse?.data?.data?.ORDER_NUMBER || "");
-          getOrders
+          getOrders;
         }
         // updateOrder({}, ordersResponse?.data?.data?.ORDER_NUMBER);
       } catch (error) {
@@ -204,7 +265,6 @@ export default function Index() {
     } else {
       // window.location.href = "/login";
     }
-
     // get address
 
     // Get category store information
@@ -259,7 +319,6 @@ export default function Index() {
 
   const getLinkPrintViettel = async (orderVId) => {
     try {
-      setToken(localStorage.getItem("token"));
       if (token) {
         console.log("get link in...");
         const responsePrintCode = await axios.post(
@@ -268,7 +327,7 @@ export default function Index() {
           {
             headers: {
               accept: "*/*",
-              token: token,
+              token: token
             },
           }
         );
@@ -327,7 +386,12 @@ export default function Index() {
     const futureTime = currentTime + minutes * 60000; // 1 phút = 60000 milliseconds
     return futureTime;
   };
+  function convertUTCToVietnamTime(utcTimeString) {
+    const utcTime = new Date(utcTimeString);
+    utcTime.setHours(utcTime.getHours() + 7);
 
+    return utcTime.toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" });
+  }
   const [active, setActive] = useState(false);
 
   const handleOpenModal = useCallback(() => setActive(!active), [active]);
@@ -339,38 +403,13 @@ export default function Index() {
     const orderNumber = parts[parts.length - 1];
     return orderNumber;
   };
+
   return (
     <Page>
       <ui-title-bar title="Home Viettel Post">
         <button variant="primary" onClick={getOrders}>
           Reload Orders
         </button>
-        <button
-          onClick={() => {
-            // getOrdersViettel({
-            //   TYPE: 0,
-            //   INVENTORY: -1,
-            //   ORDER505: -1,
-            //   STATUS:
-            //     "-100,-101,-102,-108,-109,-110,100,102,103,104,105,107,200,201,202,300,301,302,303,320,400,500,501,502,503,504,505,506,507,508,509,515,550,551,570",
-            //   DATE_TO: "10/08/2023",
-            //   DATE_FROM: "28/07/2023",
-            //   PAGE_INDEX: 1,
-            //   PAGE_SIZE: 10,
-            //   OTHER_PROPERTIES: "",
-            //   ORDER_PAYMENT: "",
-            //   REASON_RETURN: null,
-            //   deviceId: "n99xapd6xyonzztnsfh9w",
-            // });
-            updateOrderNote(
-              "gid://shopify/Order/5401317572888",
-              "Đây là ghi chú mới"
-            );
-          }}
-        >
-          Get all order *Viettel
-        </button>
-        {/* <button onClick={loginGetToken}>Login</button> */}
       </ui-title-bar>
       <VerticalStack gap="5">
         <Layout>
@@ -392,29 +431,45 @@ export default function Index() {
                 headings={columns}
                 rows={
                   orders.map((order) => [
-                    `#...${order?.id.slice(-4)}`,
-                    order?.note,
-                    order?.createdAt,
+                    <a
+                      style={{ textDecoration: "none" }}
+                      href={`https://admin.shopify.com/store/${
+                        shopOrdersData?.shop
+                      }/orders/${getIdFormGrapQL(order?.id)}`}
+                      target="_blank"
+                    >
+                      {`#...${order?.id.slice(-5)}`}
+                      📝
+                    </a>,
+                    order?.note || (
+                      <i style={{ backgroundColor: "yellow" }}>
+                        Chưa tạo đơn Viettel Post
+                      </i>
+                    ),
+                    convertUTCToVietnamTime(order?.createdAt),
                     order?.customer?.displayName || "...",
-                    order?.totalPrice + " VNĐ",
+                    // order?.totalPrice + " VNĐ",
                     order?.currentSubtotalLineItemsQuantity,
                     <>
+                      <Link to={`/app/viettel/${getIdFormGrapQL(order?.id)}`}>
+                        <button
+                          disabled={order.note ? true : false}
+                          // onClick={() => {
+                          //   if (order?.id) {
+                          //     createViettel(order?.id);
+                          //   }
+                          // }}
+                        >
+                          🏴󠁧󠁢󠁥󠁮󠁧󠁿Tạo đơn
+                        </button>
+                      </Link>
                       <button
-                        disabled={order.note ? true : false}
-                        onClick={() => {
-                          if (order?.id) {
-                            createViettel(order?.id);
-                          }
-                        }}
-                      >
-                        🏴󠁧󠁢󠁥󠁮󠁧󠁿
-                      </button>
-                      <button
+                        disabled={order.note ? false : true}
                         onClick={() => {
                           printViettel(order?.note);
                         }}
                       >
-                        🖨️
+                        🖨️In
                       </button>
                     </>,
                   ]) || []
@@ -426,7 +481,7 @@ export default function Index() {
       </VerticalStack>
       <Modal
         // activator={activator}
-        open={active}
+        open={!linkPrintV.orderVId ? false : active}
         onClose={handleOpenModal}
         title={`Print: #${linkPrintV?.orderVId}`}
       >

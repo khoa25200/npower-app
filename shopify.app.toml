@@ -2,7 +2,7 @@
 
 name = "npower-app"
 client_id = "50fdfca1b98e8df24a6e4c6903c63e23"
-application_url = "https://bears-nt-www-afraid.trycloudflare.com"
+application_url = "https://departure-wifi-dean-tours.trycloudflare.com"
 embedded = true
 
 [access_scopes]
@@ -12,9 +12,9 @@ use_legacy_install_flow = true
 
 [auth]
 redirect_urls = [
-  "https://bears-nt-www-afraid.trycloudflare.com/auth/callback",
-  "https://bears-nt-www-afraid.trycloudflare.com/auth/shopify/callback",
-  "https://bears-nt-www-afraid.trycloudflare.com/api/auth/callback"
+  "https://departure-wifi-dean-tours.trycloudflare.com/auth/callback",
+  "https://departure-wifi-dean-tours.trycloudflare.com/auth/shopify/callback",
+  "https://departure-wifi-dean-tours.trycloudflare.com/api/auth/callback"
 ]
 
 [webhooks]
