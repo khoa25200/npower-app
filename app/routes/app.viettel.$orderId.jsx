@@ -21,6 +21,7 @@ import {
   useActionData,
   useSubmit,
   Form,
+  useNavigate,
 } from "@remix-run/react";
 import { authenticate } from "../shopify.server";
 import { json, redirect } from "@remix-run/node";
@@ -74,120 +75,326 @@ export const loader = async ({ request, params }) => {
 };
 
 export async function action({ request, params }) {
-  const rawData = {
-    ORDER_NUMBER: params.orderId + "1",
-    GROUPADDRESS_ID: 5818802,
-    CUS_ID: 722,
-    DELIVERY_DATE: "11/10/2018 15:09:52",
-    SENDER_FULLNAME: "Đăng Khoa",
-    SENDER_ADDRESS: "229/48 tây thạnh",
-    SENDER_PHONE: "0326123397",
-    SENDER_EMAIL: "dangkhoa@navitech.co",
-    SENDER_DISTRICT: 4,
-    SENDER_PROVINCE: 1,
-    SENDER_LATITUDE: 0,
-    SENDER_LONGITUDE: 0,
-    RECEIVER_FULLNAME: "Đăng Khoa- Test",
-    RECEIVER_ADDRESS: "1 NKKN P.Nguyễn Thái Bình, Quận 1, TP Hồ Chí Minh",
-    RECEIVER_PHONE: "0907882792",
-    RECEIVER_EMAIL: "hoangnh50@fpt.com.vn",
-    RECEIVER_PROVINCE: 34,
-    RECEIVER_DISTRICT: 390,
-    RECEIVER_WARDS: 7393,
+  const body = await request.formData();
+  const token = body.get("token");
+  if (token) {
+    // get from form data
+    const _action = body.get("_action");
+    const senderName = body.get("senderName");
+    const senderPhone = body.get("senderPhone");
+    const senderEmail = body.get("senderEmail");
+    const senderDistrict = body.get("senderDistrict");
+    const senderProvince = body.get("senderProvince");
+    const senderWard = body.get("senderWard");
+    const senderFullAdress = body.get("senderFullAdress");
 
-    RECEIVER_LATITUDE: 0,
-    RECEIVER_LONGITUDE: 0,
-    PRODUCT_NAME: "Máy xay sinh tố Philips HR2118 2.0L ",
-    PRODUCT_DESCRIPTION: "Máy xay sinh tố Philips HR2118 2.0L ",
-    PRODUCT_QUANTITY: 1,
-    PRODUCT_PRICE: 2292764,
-    PRODUCT_WEIGHT: 40000,
-    PRODUCT_LENGTH: 38,
-    PRODUCT_WIDTH: 24,
-    PRODUCT_HEIGHT: 25,
-    PRODUCT_TYPE: "HH",
-    ORDER_PAYMENT: 3,
-    ORDER_SERVICE: "VCBO",
-    ORDER_SERVICE_ADD: "",
-    ORDER_VOUCHER: "",
-    ORDER_NOTE: "cho xem hàng, không cho thử",
-    MONEY_COLLECTION: 2292764,
-    CHECK_UNIQUE: true,
-    LIST_ITEM: [
-      {
+    const receiveName = body.get("receiveName");
+    const receivePhone = body.get("receivePhone");
+    const receiveEmail = body.get("receiveEmail");
+    const receiveDistrict = body.get("receiveDistrict");
+    const receiveWard = body.get("receiveWard");
+    const receiveProvince = body.get("receiveProvince");
+    const receiveFullAddress = body.get("receiveFullAddress");
+
+    const valueProductType = body.get("radioTypes") === "buukien" ? "HH" : "TH";
+    const totalQuantity = body.get("totalQuantity");
+    const totalWeight = body.get("totalWeight");
+    const totalPrice = body.get("totalPrice");
+    const productCollectionPrice = body.get("productCollectionPrice");
+    const serviceMatch = body.get("serviceMatch");
+    const productNote = body.get("productNote");
+
+    if (_action === "CHECK_SERVICE") {
+      const responseServiceList = await axios.post(
+        `https://partner.viettelpost.vn/v2/order/getPriceAll`,
+        {
+          SENDER_DISTRICT: senderDistrict,
+          SENDER_PROVINCE: senderProvince,
+          RECEIVER_DISTRICT: receiveProvince,
+          RECEIVER_PROVINCE: receiveDistrict,
+          PRODUCT_TYPE: valueProductType,
+          PRODUCT_WEIGHT: totalWeight,
+          PRODUCT_PRICE: totalPrice,
+          MONEY_COLLECTION: productCollectionPrice,
+          PRODUCT_LENGTH: 0,
+          PRODUCT_WIDTH: 0,
+          PRODUCT_HEIGHT: 0,
+          TYPE: 1,
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Token: token,
+            // Cookie: "SERVERID=A"
+          },
+        }
+      );
+
+      return responseServiceList.data;
+    } else if (_action === "CHECK_PRICES") {
+      const responsePricesEstimate = await axios.post(
+        `https://partner.viettelpost.vn/v2/order/getPrice`,
+        {
+          PRODUCT_WEIGHT: totalWeight,
+          PRODUCT_PRICE: totalPrice,
+          MONEY_COLLECTION: productCollectionPrice,
+          ORDER_SERVICE_ADD: "",
+          ORDER_SERVICE: serviceMatch,
+          SENDER_DISTRICT: senderDistrict,
+          SENDER_PROVINCE: senderProvince,
+          RECEIVER_DISTRICT: receiveDistrict,
+          RECEIVER_PROVINCE: receiveProvince,
+          PRODUCT_LENGTH: 0,
+          PRODUCT_WIDTH: 0,
+          PRODUCT_HEIGHT: 0,
+          PRODUCT_TYPE: valueProductType,
+          NATIONAL_TYPE: 1,
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Token: token,
+            // Cookie: "SERVERID=A"
+          },
+        }
+      );
+      return responsePricesEstimate.data;
+    } else if (_action === "CREATE_ORDER") {
+      // Tạo đơn
+      function formatDateTime(dateTime) {
+        const day = dateTime.getDate();
+        const month = dateTime.getMonth() + 1;
+        const year = dateTime.getFullYear();
+        const hours = dateTime.getHours();
+        const minutes = dateTime.getMinutes();
+        const seconds = dateTime.getSeconds();
+
+        const formattedDate = `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
+
+        return formattedDate;
+      }
+      // const rawData = {
+      //   ORDER_NUMBER: "12",
+      //   GROUPADDRESS_ID: 5818802,
+      //   CUS_ID: 722,
+      //   DELIVERY_DATE: "11/10/2018 15:09:52",
+      //   SENDER_FULLNAME: "Yanme Shop",
+      //   SENDER_ADDRESS:
+      //     "Số 5A ngách 22 ngõ 282 Kim Giang, Đại Kim, Hoàng Mai, Hà Nội",
+      //   SENDER_PHONE: "0967.363.789",
+      //   SENDER_EMAIL: "vanchinh.libra@gmail.com",
+      //   SENDER_DISTRICT: 4,
+      //   SENDER_PROVINCE: 1,
+      //   SENDER_LATITUDE: 0,
+      //   SENDER_LONGITUDE: 0,
+      //   RECEIVER_FULLNAME: "Hoàng - Test",
+      //   RECEIVER_ADDRESS: "1 NKKN P.Nguyễn Thái Bình, Quận 1, TP Hồ Chí Minh",
+      //   RECEIVER_PHONE: "0907882792",
+      //   RECEIVER_EMAIL: "hoangnh50@fpt.com.vn",
+      //   RECEIVER_PROVINCE: 34,
+      //   RECEIVER_DISTRICT: 390,
+      //   RECEIVER_WARDS: 7393,
+      //   RECEIVER_LATITUDE: 0,
+      //   RECEIVER_LONGITUDE: 0,
+      //   PRODUCT_NAME: "Máy xay sinh tố Philips HR2118 2.0L ",
+      //   PRODUCT_DESCRIPTION: "Máy xay sinh tố Philips HR2118 2.0L ",
+      //   PRODUCT_QUANTITY: 1,
+      //   PRODUCT_PRICE: 2292764,
+      //   PRODUCT_WEIGHT: 40000,
+      //   PRODUCT_LENGTH: 38,
+      //   PRODUCT_WIDTH: 24,
+      //   PRODUCT_HEIGHT: 25,
+      //   PRODUCT_TYPE: "HH",
+      //   ORDER_PAYMENT: 3,
+      //   ORDER_SERVICE: "VCBO",
+      //   ORDER_SERVICE_ADD: "",
+      //   ORDER_VOUCHER: "",
+      //   ORDER_NOTE: "cho xem hàng, không cho thử",
+      //   MONEY_COLLECTION: 2292764,
+      //   // "CHECK_UNIQUE": true,
+      //   LIST_ITEM: [
+      //     {
+      //       PRODUCT_NAME: "Máy xay sinh tố Philips HR2118 2.0L ",
+      //       PRODUCT_PRICE: 2150000,
+      //       PRODUCT_WEIGHT: 2500,
+      //       PRODUCT_QUANTITY: 1,
+      //     },
+      //   ],
+      // };
+      const rawData = {
+        ORDER_NUMBER: params.orderId,
+        GROUPADDRESS_ID: 5818802,
+        // CUS_ID: 722,
+        DELIVERY_DATE: formatDateTime(new Date()),
+        SENDER_FULLNAME: senderName,
+        SENDER_ADDRESS: senderFullAdress,
+        SENDER_PHONE: senderPhone,
+        SENDER_EMAIL: senderEmail,
+        SENDER_DISTRICT: senderDistrict,
+        SENDER_PROVINCE: senderProvince,
+        SENDER_WARD: senderWard,
+        SENDER_LATITUDE: 0,
+        SENDER_LONGITUDE: 0,
+        RECEIVER_FULLNAME: receiveName,
+        RECEIVER_ADDRESS: receiveFullAddress,
+        RECEIVER_PHONE: receivePhone,
+        RECEIVER_EMAIL: receiveEmail,
+        RECEIVER_PROVINCE: receiveProvince,
+        RECEIVER_DISTRICT: receiveDistrict,
+        RECEIVER_WARDS: receiveWard,
+        RECEIVER_LATITUDE: 0,
+        RECEIVER_LONGITUDE: 0,
         PRODUCT_NAME: "Máy xay sinh tố Philips HR2118 2.0L ",
-        PRODUCT_PRICE: 2150000,
-        PRODUCT_WEIGHT: 2500,
-        PRODUCT_QUANTITY: 1,
-      },
-    ],
-  };
+        PRODUCT_DESCRIPTION: "Máy xay sinh tố Philips HR2118 2.0L ",
+        PRODUCT_QUANTITY: totalQuantity,
+        PRODUCT_PRICE: totalPrice,
+        PRODUCT_WEIGHT: totalWeight,
+        PRODUCT_LENGTH: 38,
+        PRODUCT_WIDTH: 24,
+        PRODUCT_HEIGHT: 25,
+        PRODUCT_TYPE: valueProductType,
+        ORDER_PAYMENT: 3,
+        ORDER_SERVICE: serviceMatch,
+        ORDER_SERVICE_ADD: "",
+        ORDER_VOUCHER: "",
+        ORDER_NOTE: productNote,
+        MONEY_COLLECTION: productCollectionPrice,
+        CHECK_UNIQUE: false,
+        LIST_ITEM: [
+          {
+            PRODUCT_NAME: "Máy xay sinh tố Philips HR2118 2.0L ",
+            PRODUCT_PRICE: 2150000,
+            PRODUCT_WEIGHT: 2500,
+            PRODUCT_QUANTITY: 1,
+          },
+        ],
+      };
 
-  const createOrderVResponse = await axios.post(
-    "https://partner.viettelpost.vn/v2/order/createOrder",
-    rawData,
-    {
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.API_TOKEN}`,
-        token:
-          "eyJhbGciOiJFUzI1NiJ9.eyJzdWIiOiIwMzI2MTIzMzk3IiwiVXNlcklkIjoxMzEzNTAyMCwiRnJvbVNvdXJjZSI6NSwiVG9rZW4iOiJPNjNZT1hDQ1ZLQk9SNEdOUEoiLCJleHAiOjE2OTIwODgxNTQsIlBhcnRuZXIiOjEzMTM1MDIwfQ.pI6w8JipwiiRV2UwkzvjwrpIW2xWzDMrYPFjAXsNAXoYLMvAaK7lW7-rLLgCqesRRUAoTFdz5ufyrglKiDuCUQ",
-      },
+      const dataAction = await axios
+        .post("https://partner.viettelpost.vn/v2/order/createOrder", rawData, {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${process.env.API_TOKEN}`,
+            token: token,
+          },
+        })
+        .then((res) => {
+          const graphqlUrl = `https://dangkhoa252001.myshopify.com/admin/api/2023-07/graphql.json`;
+          // const graphqlUrl = `https://dangkhoa2520.myshopify.com/admin/api/2023-07/graphql.json`;
+          const query = `
+                mutation {
+                  orderUpdate(input: {
+                    id: "gid://shopify/Order/${params.orderId}"
+                    note: "${res.data?.data?.ORDER_NUMBER}"
+                  }) {
+                    order {
+                      id
+                      note
+                    }
+                  }
+                }
+              `;
+
+          const headers = {
+            "X-Shopify-Access-Token": "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", //25202001
+            // "X-Shopify-Access-Token": "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",
+          };
+          const res2 = axios
+            .post(graphqlUrl, { query }, { headers })
+            .then(() => {
+              return res.data;
+            })
+            .catch((err) => {
+              return "lỗi req2";
+            });
+          return res.data;
+        })
+        .catch((err) => {
+          return "lỗi req1";
+        });
+
+      return dataAction;
+    } else {
+      return "2";
     }
-  );
-  return createOrderVResponse.data;
+    // if (_action === "LIKE") {
+    //   const rawData = {
+    //     ORDER_NUMBER: params.orderId + "1",
+    //     GROUPADDRESS_ID: 5818802,
+    //     CUS_ID: 722,
+    //     DELIVERY_DATE: "11/10/2018 15:09:52",
+    //     SENDER_FULLNAME: "Đăng Khoa",
+    //     SENDER_ADDRESS: "229/48 tây thạnh",
+    //     SENDER_PHONE: "0326123397",
+    //     SENDER_EMAIL: "dangkhoa@navitech.co",
+    //     SENDER_DISTRICT: 4,
+    //     SENDER_PROVINCE: 1,
+    //     SENDER_LATITUDE: 0,
+    //     SENDER_LONGITUDE: 0,
+    //     RECEIVER_FULLNAME: "Đăng Khoa- Test",
+    //     RECEIVER_ADDRESS: "1 NKKN P.Nguyễn Thái Bình, Quận 1, TP Hồ Chí Minh",
+    //     RECEIVER_PHONE: "0907882792",
+    //     RECEIVER_EMAIL: "hoangnh50@fpt.com.vn",
+    //     RECEIVER_PROVINCE: 34,
+    //     RECEIVER_DISTRICT: 390,
+    //     RECEIVER_WARDS: 7393,
+
+    //     RECEIVER_LATITUDE: 0,
+    //     RECEIVER_LONGITUDE: 0,
+    //     PRODUCT_NAME: "Máy xay sinh tố Philips HR2118 2.0L ",
+    //     PRODUCT_DESCRIPTION: "Máy xay sinh tố Philips HR2118 2.0L ",
+    //     PRODUCT_QUANTITY: 1,
+    //     PRODUCT_PRICE: 2292764,
+    //     PRODUCT_WEIGHT: 40000,
+    //     PRODUCT_LENGTH: 38,
+    //     PRODUCT_WIDTH: 24,
+    //     PRODUCT_HEIGHT: 25,
+    //     PRODUCT_TYPE: "HH",
+    //     ORDER_PAYMENT: 3,
+    //     ORDER_SERVICE: "VCBO",
+    //     ORDER_SERVICE_ADD: "",
+    //     ORDER_VOUCHER: "",
+    //     ORDER_NOTE: "cho xem hàng, không cho thử",
+    //     MONEY_COLLECTION: 2292764,
+    //     CHECK_UNIQUE: true,
+    //     LIST_ITEM: [
+    //       {
+    //         PRODUCT_NAME: "Máy xay sinh tố Philips HR2118 2.0L ",
+    //         PRODUCT_PRICE: 2150000,
+    //         PRODUCT_WEIGHT: 2500,
+    //         PRODUCT_QUANTITY: 1,
+    //       },
+    //     ],
+    //   };
+
+    //   const dataAction = await axios.post(
+    //     "https://partner.viettelpost.vn/v2/order/createOrder",
+    //     rawData,
+    //     {
+    //       headers: {
+    //         "Content-Type": "application/json",
+    //         Authorization: `Bearer ${process.env.API_TOKEN}`,
+    //         token:
+    //           "eyJhbGciOiJFUzI1NiJ9.eyJzdWIiOiIwMzI2MTIzMzk3IiwiVXNlcklkIjoxMzEzNTAyMCwiRnJvbVNvdXJjZSI6NSwiVG9rZW4iOiJPNjNZT1hDQ1ZLQk9SNEdOUEoiLCJleHAiOjE2OTIwODgxNTQsIlBhcnRuZXIiOjEzMTM1MDIwfQ.pI6w8JipwiiRV2UwkzvjwrpIW2xWzDMrYPFjAXsNAXoYLMvAaK7lW7-rLLgCqesRRUAoTFdz5ufyrglKiDuCUQ",
+    //       },
+    //     }
+    //   );
+    //   return dataAction.data;
+    // }
+  } else {
+    return "no token";
+  }
 }
 
-const graphqlUrl = `https://cors-anywhere.herokuapp.com/https://dangkhoa2520.myshopify.com/admin/api/2023-07/graphql.json`;
-const updateOrderNote = async (orderId, newNote) => {
-  const query = `
-    mutation {
-      orderUpdate(input: {
-        id: "${orderId}"
-        note: "${newNote}"
-      }) {
-        order {
-          id
-          note
-        }
-      }
-    }
-  `;
-
-  const headers = {
-    "X-Shopify-Access-Token": "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",
-  };
-  const res = await axios
-    .post(graphqlUrl, { query }, { headers })
-    .then((response) => {
-      console.log("Response:", response?.data);
-    })
-    .catch((error) => {
-      console.error("Error:", error?.response);
-    });
-
-  return res;
-};
-
-// export const getProvince = async () => {
-//   const provinceRes = await axios.get(
-//     "https://cors-anywhere.herokuapp.com/https://partner.viettelpost.vn/v2/categories/listProvince",
-//     {
-//       headers: {
-//         "Content-Type": "application/json",
-//         // Authorization: `Bearer ${process.env.API_TOKEN}`,
-//       },
-//     }
-//   );
-
-//   return provinceRes.data;
-// };
 
 export default function CreateViettelPost() {
-  const createOrderVResponse = useActionData();
+  const dataAction = useActionData();
   const submit = useSubmit();
+  const [token, setToken] = useState("");
+
   const shopOrdersData = useLoaderData();
   const [senderName, setSenderName] = useState("");
+  const [actionForm, setActionForm] = useState("");
   const [senderPhone, setSenderPhone] = useState(
     shopOrdersData.order.phone || ""
   );
@@ -246,10 +453,52 @@ export default function CreateViettelPost() {
     end: new Date("Tue Sep 09 2023 00:00:00 GMT-0500 (EST)"),
   });
 
+  const [productMainName, setProductMainName] = useState(
+    listProductsItem[0].name
+  );
+  const [productMainDes, setProductMainDes] = useState("");
+  const [productMainNote, setProductMainNote] = useState("");
+  const [productCollectionPrice, setProductCollectionPrice] = useState(0);
+
+  const [selectedServiceMatch, setSelectedServiceMatch] = useState();
+  const [optionsServiceMatch, setOptionsServiceMatch] = useState([]);
+
+  const [pricesEstimate, setPricesEstimate] = useState({});
+
   const handleMonthChangeDeliveryExpectation = useCallback(
     (month, year) => setDate({ month, year }),
     []
   );
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    console.log("Action data nè: ====?", dataAction);
+    if (dataAction) {
+      if (dataAction === "no token") {
+        navigate("/app/login");
+      } else {
+        if (dataAction[0]?.MA_DV_CHINH) {
+          setOptionsServiceMatch(
+            dataAction?.map((s) => {
+              return {
+                label: s?.TEN_DICHVU,
+                value: s?.MA_DV_CHINH,
+              };
+            })
+          );
+        }
+        if (dataAction?.data?.MONEY_TOTAL && dataAction?.error === false) {
+          setPricesEstimate(dataAction?.data);
+        }
+        if (dataAction?.data?.ORDER_NUMBER && dataAction?.error === false) {
+          alert(`Tạo đơn #${dataAction?.data?.ORDER_NUMBER} Thành Công!!!`);
+          navigate("/app");
+        } else {
+          console.log(dataAction?.message);
+        }
+      }
+    }
+  }, [dataAction]);
   useEffect(() => {
     const getDis = async () => {
       const responseDistrict = await axios.get(
@@ -337,67 +586,6 @@ export default function CreateViettelPost() {
     getWardsReceiver().catch(console.error);
   }, [selectedDistrictReceive]);
 
-  useEffect(() => {
-    if (
-      selectedDistrictSender &&
-      selectedProvinceSender &&
-      selectedDistrictReceive &&
-      selectedProvinceReceive &&
-      valueProductType &&
-      totalWeight &&
-      totalPrice
-    ) {
-      const getServiceListMatch = async () => {
-        const responseServiceList = await axios.post(
-          `https://cors-anywhere.herokuapp.com/https://partner.viettelpost.vn/v2/order/getPriceAll`,
-          {
-            SENDER_DISTRICT: selectedDistrictSender,
-            SENDER_PROVINCE: selectedProvinceSender,
-            RECEIVER_DISTRICT: selectedDistrictReceive,
-            RECEIVER_PROVINCE: selectedProvinceReceive,
-            PRODUCT_TYPE: valueProductType === "tailieu" ? "TH" : "HH",
-            PRODUCT_WEIGHT: totalWeight,
-            PRODUCT_PRICE: totalPrice,
-            MONEY_COLLECTION: "5000000",
-            PRODUCT_LENGTH: 0,
-            PRODUCT_WIDTH: 0,
-            PRODUCT_HEIGHT: 0,
-            TYPE: 1,
-          },
-          {
-            headers: {
-              "Content-Type": "application/json",
-              Token:
-                "eyJhbGciOiJFUzI1NiJ9.eyJzdWIiOiIwMzI2MTIzMzk3IiwiVXNlcklkIjoxMzEzNTAyMCwiRnJvbVNvdXJjZSI6NSwiVG9rZW4iOiJPNjNZT1hDQ1ZLQk9SNEdOUEoiLCJleHAiOjE2OTIxNjc1NzYsIlBhcnRuZXIiOjEzMTM1MDIwfQ.yswXUTsUmLN3YK7mvNFVHX5ViP-eGIq2JZs14_DcHMGMaUJZjDj8QNjhowxVTZYQD5PhppmCE06U3W7QjBVCjQ",
-              // Cookie: "SERVERID=A"
-            },
-          }
-        );
-        console.log("Service List==>", responseServiceList);
-        if (!responseServiceList.data.error) {
-          // setOptionsWardReceive(
-          //   responseServiceList.data.data?.map((value) => {
-          //     return {
-          //       label: value.WARDS_NAME,
-          //       value: value.WARDS_ID.toString(),
-          //     };
-          //   })
-          // );
-        } else {
-          responseServiceList.data.message;
-        }
-      };
-      getServiceListMatch().catch(console.error);
-    }
-  }, [
-    selectedDistrictSender,
-    selectedProvinceSender,
-    selectedDistrictReceive,
-    selectedProvinceReceive,
-    valueProductType,
-    totalWeight,
-    totalPrice,
-  ]);
 
   const handleSelectChangeProvinceSender = useCallback(
     (value) => setSelectedProvinceSender(value),
@@ -423,7 +611,10 @@ export default function CreateViettelPost() {
     (value) => setSelectedWardReceive(value),
     []
   );
-
+  const handleSelectChangeServiceMatch = useCallback(
+    (value) => setSelectedServiceMatch(value),
+    []
+  );
   const optionsProvince = provinceData.data?.map((value) => {
     return {
       label: value.PROVINCE_NAME,
@@ -435,26 +626,7 @@ export default function CreateViettelPost() {
   console.log("order==>", orders);
   const params = useParams();
   const orderId = params.orderId;
-  const handleCreateOrderViettelPost = () => {
-    try {
-      submit({}, { replace: true, method: "POST" });
-      console.log("order created...==>", createOrderVResponse);
-      if (createOrderVResponse.error === true) {
-        console.log(createOrderVResponse.message);
-      } else {
-        console.log(
-          "khoa=> order number res from vt=>: ",
-          createOrderVResponse?.data?.ORDER_NUMBER
-        );
-        updateOrderNote(
-          `gid://shopify/Order/${orderId}`,
-          createOrderVResponse?.data?.ORDER_NUMBER || ""
-        );
-      }
-    } catch (error) {
-      console.log("Error:", error);
-    }
-  };
+  
   function formatDate(dateString) {
     const date = new Date(dateString);
     date.setHours(date.getHours() + 7); // Thêm 7 giờ để chuyển múi giờ
@@ -541,8 +713,8 @@ export default function CreateViettelPost() {
     RECEIVER_LATITUDE: 0,
     RECEIVER_LONGITUDE: 0,
     EXPECTED_DELIVERY_DATE: formatDate(selectedDates.end),
-    PRODUCT_NAME: "Máy xay sinh tố Philips HR2118 2.0L ",
-    PRODUCT_DESCRIPTION: "Máy xay sinh tố Philips HR2118 2.0L ",
+    PRODUCT_NAME: productMainName,
+    PRODUCT_DESCRIPTION: productMainDes,
     PRODUCT_QUANTITY: totalQuantity,
     PRODUCT_PRICE: totalPrice,
     PRODUCT_WEIGHT: totalWeight,
@@ -554,8 +726,8 @@ export default function CreateViettelPost() {
     ORDER_SERVICE: "VCBO",
     ORDER_SERVICE_ADD: "",
     ORDER_VOUCHER: "",
-    ORDER_NOTE: "cho xem hàng, không cho thử",
-    MONEY_COLLECTION: 2292764,
+    ORDER_NOTE: productMainNote,
+    MONEY_COLLECTION: productCollectionPrice,
     CHECK_UNIQUE: true,
     LIST_ITEM: listProductsItem.map((value) => {
       return {
@@ -573,6 +745,8 @@ export default function CreateViettelPost() {
         <Layout.Section>
           <Card>
             <Form method="post">
+              <input type="hidden" name="_action" value={actionForm} />
+              <input type="hidden" name="token" value={token} />
               <FormLayout>
                 <a
                   style={{ textDecoration: "none" }}
@@ -593,6 +767,7 @@ export default function CreateViettelPost() {
                     <TextField
                       label="Tên Người Gửi:"
                       value={senderName}
+                      name="senderName"
                       onChange={(value) => {
                         setSenderName(value);
                       }}
@@ -601,6 +776,7 @@ export default function CreateViettelPost() {
                     <TextField
                       label="Số điện thoại người gửi:"
                       value={senderPhone}
+                      name="senderPhone"
                       type="tel"
                       onChange={(value) => {
                         setSenderPhone(value);
@@ -610,21 +786,13 @@ export default function CreateViettelPost() {
                     <TextField
                       label="Email người gửi:"
                       value={senderEmail}
+                      name="senderEmail"
                       type="email"
                       onChange={(value) => {
                         setSenderEmail(value);
                       }}
                       autoComplete="off"
                     />
-                    {/* <TextField
-                      label="Số Nhà/Tên Đường:"
-                      value={senderEmail}
-                      type="email"
-                      onChange={(value) => {
-                        setSenderEmail(value);
-                      }}
-                      autoComplete="off"
-                    /> */}
                   </FormLayout.Group>
                   <Card>
                     <FormLayout.Group>
@@ -632,17 +800,20 @@ export default function CreateViettelPost() {
                       <Select
                         label="Thành Phố/Tỉnh:"
                         options={optionsProvince}
+                        name="senderProvince"
                         onChange={handleSelectChangeProvinceSender}
                         value={selectedProvinceSender}
                       />
                       <Select
                         label="Quận/Huyện:"
                         options={optionsDistrictSender}
+                        name="senderDistrict"
                         onChange={handleSelectChangeDistrictSender}
                         value={selectedDistrictSender}
                       />
                       <Select
                         label="Phường/Xã:"
+                        name="senderWard"
                         options={optionsWardSender}
                         onChange={handleSelectChangeWardSender}
                         value={selectedWardSender}
@@ -671,6 +842,7 @@ export default function CreateViettelPost() {
                             (value) => value.value == selectedProvinceSender
                           ).label || ""
                         }`}
+                        name="senderFullAdress"
                         autoComplete="off"
                       />
                     </FormLayout.Group>
@@ -684,6 +856,7 @@ export default function CreateViettelPost() {
                   <FormLayout.Group>
                     <TextField
                       label="Tên Người Nhận:"
+                      name="receiveName"
                       value={receiveName}
                       onChange={(value) => {
                         setReceiveName(value);
@@ -693,6 +866,7 @@ export default function CreateViettelPost() {
                     <TextField
                       label="Số điện thoại người nhận:"
                       value={receivePhone}
+                      name="receivePhone"
                       type="tel"
                       onChange={(value) => {
                         setReceivePhone(value);
@@ -702,21 +876,13 @@ export default function CreateViettelPost() {
                     <TextField
                       label="Email người nhận:"
                       value={receiveEmail}
+                      name="receiveEmail"
                       type="email"
                       onChange={(value) => {
                         setReceiveEmail(value);
                       }}
                       autoComplete="off"
                     />
-                    {/* <TextField
-                      label="Email người nhận:"
-                      value={receiveEmail}
-                      type="email"
-                      onChange={(value) => {
-                        setReceiveEmail(value);
-                      }}
-                      autoComplete="off"
-                    /> */}
                   </FormLayout.Group>
                   <Card>
                     <FormLayout.Group>
@@ -724,17 +890,20 @@ export default function CreateViettelPost() {
                       <Select
                         label="Thành Phố/Tỉnh:"
                         options={optionsProvince}
+                        name="receiveProvince"
                         onChange={handleSelectChangeProvinceReceive}
                         value={selectedProvinceReceive}
                       />
                       <Select
                         label="Quận/Huyện:"
                         options={optionsDistrictReceive}
+                        name="receiveDistrict"
                         onChange={handleSelectChangeDistrictReceive}
                         value={selectedDistrictReceive}
                       />
                       <Select
                         label="Phường/Xã:"
+                        name="receiveWard"
                         options={optionsWardReceive}
                         onChange={handleSelectChangeWardReceive}
                         value={selectedWardReceive}
@@ -763,6 +932,7 @@ export default function CreateViettelPost() {
                             (value) => value.value == selectedProvinceReceive
                           ).label || ""
                         }`}
+                        name="receiveFullAddress"
                         autoComplete="off"
                       />
                     </FormLayout.Group>
@@ -785,7 +955,6 @@ export default function CreateViettelPost() {
                   <label>Loại sản phẩm:</label>
                   <RadioButton
                     label="Bưu kiện"
-                    // helpText="Customers will only be able to check out as guests."
                     checked={valueProductType === "buukien"}
                     id="buukien"
                     name="buukien"
@@ -793,11 +962,15 @@ export default function CreateViettelPost() {
                   />
                   <RadioButton
                     label="Tài liệu"
-                    // helpText="Customers will be able to check out with a customer account or as a guest."
                     id="tailieu"
                     name="tailieu"
                     checked={valueProductType === "tailieu"}
                     onChange={handleChangeProductType}
+                  />
+                  <input
+                    type="hidden"
+                    value={valueProductType}
+                    name="radioTypes"
                   />
                 </FormLayout.Group>
                 <Divider />
@@ -872,8 +1045,7 @@ export default function CreateViettelPost() {
                     </>
                   );
                 })}
-                {/* </FormLayout.Group>
-                </FormLayout.Group> */}
+
                 <Button
                   destructive
                   onClick={() => {
@@ -898,6 +1070,7 @@ export default function CreateViettelPost() {
                   <TextField
                     label="Tổng Số lượng:"
                     value={totalQuantity.toString()}
+                    name="totalQuantity"
                     readOnly
                     autoComplete="off"
                   />
@@ -905,22 +1078,174 @@ export default function CreateViettelPost() {
                     label="Tổng Khối Lượng:"
                     value={totalWeight.toString()}
                     readOnly
+                    name="totalWeight"
                     autoComplete="off"
                   />
                   <TextField
                     label="Tổng Giá:"
                     value={totalPrice.toString()}
+                    name="totalPrice"
                     readOnly
                     autoComplete="off"
                   />
                 </FormLayout.Group>
-                <Button onClick={() => handleCreateOrderViettelPost()}>
-                  Create Order Viettel Post
-                </Button>
 
-                <Link to="/app">Back to Home page</Link>
+                <FormLayout.Group>
+                  <TextField
+                    label="Tên Đơn Hàng:"
+                    value={productMainName}
+                    onChange={(value) => {
+                      setProductMainName(value);
+                    }}
+                    autoComplete="off"
+                  />
+                  <TextField
+                    label="Mô Tả:"
+                    value={productMainDes}
+                    onChange={(value) => {
+                      setProductMainDes(value);
+                    }}
+                    autoComplete="off"
+                  />
+                </FormLayout.Group>
+                <FormLayout.Group>
+                  <TextField
+                    label="Ghi Chú:"
+                    value={productMainNote}
+                    onChange={(value) => {
+                      setProductMainNote(value);
+                    }}
+                    name="productNote"
+                    autoComplete="off"
+                  />
+                  <TextField
+                    label="Tiền Thu Hộ:"
+                    value={productCollectionPrice.toString()}
+                    onChange={(value) => {
+                      setProductCollectionPrice(Number(value));
+                    }}
+                    name="productCollectionPrice"
+                    autoComplete="off"
+                  />
+                </FormLayout.Group>
+                <Divider />
+                <button
+                  onClick={() => {
+                    setToken(localStorage.getItem("token"));
+                    setActionForm("CHECK_SERVICE");
+                  }}
+                >
+                  Kiểm tra dịch vụ phù hợp
+                </button>
+                <Select
+                  label="Dịch Vụ Phù Hợp:"
+                  options={optionsServiceMatch}
+                  onChange={handleSelectChangeServiceMatch}
+                  value={selectedServiceMatch}
+                  name="serviceMatch"
+                />
+                <Card roundedAbove="md" background="bg-subdued">
+                  <button
+                    onClick={() => {
+                      setToken(localStorage.getItem("token"));
+                      setActionForm("CHECK_PRICES");
+                    }}
+                  >
+                    Kiểm tra giá
+                  </button>
+                  <Text variant="headingMd" as="h6">
+                    Chi Phí Ước Tính:
+                  </Text>
+
+                  <FormLayout.Group>
+                    <List type="bullet">
+                      <List.Item>
+                        <Text variant="headingMd" as="h6">
+                          Tổng cước:{" "}
+                          <span style={{ color: "green" }}>
+                            {" "}
+                            {pricesEstimate?.MONEY_TOTAL + " đ" ||
+                              "Chưa đủ thông tin"}
+                          </span>
+                        </Text>
+                      </List.Item>
+                      <List.Item>
+                        {" "}
+                        <Text variant="headingMd" as="h6">
+                          Cước dịch vụ chính:
+                          <span style={{ color: "green" }}>
+                            {" "}
+                            {pricesEstimate?.MONEY_TOTAL_FEE + " đ" ||
+                              "Chưa đủ thông tin"}
+                          </span>
+                        </Text>
+                      </List.Item>
+                      <List.Item>
+                        <Text variant="headingMd" as="h6">
+                          Phụ phí xăng dầu:
+                          <span style={{ color: "green" }}>
+                            {" "}
+                            {pricesEstimate?.MONEY_FEE + " đ" ||
+                              "Chưa đủ thông tin"}
+                          </span>
+                        </Text>
+                      </List.Item>
+                      <List.Item>
+                        <Text variant="headingMd" as="h6">
+                          Phụ phí thu hộ:
+                          <span style={{ color: "green" }}>
+                            {" "}
+                            {pricesEstimate?.MONEY_COLLECTION_FEE + " đ" ||
+                              "Chưa đủ thông tin"}
+                          </span>
+                        </Text>
+                      </List.Item>
+                    </List>
+                    <List type="bullet">
+                      <List.Item>
+                        <Text variant="headingMd" as="h6">
+                          Tổng thời gian giao hàng cam kết:
+                          <span style={{ color: "green" }}>
+                            {" "}
+                            {pricesEstimate?.KPI_HT + " giờ" ||
+                              "Chưa đủ thông tin"}
+                          </span>
+                        </Text>
+                      </List.Item>
+                      <List.Item>
+                        <Text variant="headingMd" as="h6">
+                          Phụ phí khác:
+                          <span style={{ color: "green" }}>
+                            {" "}
+                            {pricesEstimate?.MONEY_OTHER_FEE + " đ" ||
+                              "Chưa đủ thông tin"}
+                          </span>
+                        </Text>
+                      </List.Item>
+                      <List.Item>
+                        <Text variant="headingMd" as="h6">
+                          Thuế giá trị gia tăng:
+                          <span style={{ color: "green" }}>
+                            {" "}
+                            {pricesEstimate?.MONEY_VAT + " đ" ||
+                              "Chưa đủ thông tin"}
+                          </span>
+                        </Text>
+                      </List.Item>
+                    </List>
+                  </FormLayout.Group>
+                </Card>
+                <button
+                  onClick={() => {
+                    setToken(localStorage.getItem("token"));
+                    setActionForm("CREATE_ORDER");
+                  }}
+                >
+                  Tạo Đơn Viettel Post
+                </button>
               </FormLayout>
             </Form>
+            <Link to="/app">Back to Home page</Link>
           </Card>
         </Layout.Section>
       </Layout>

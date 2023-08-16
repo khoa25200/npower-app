@@ -30,9 +30,7 @@ export default function App() {
         <Link to="/app" rel="home">
           Home
         </Link>
-        {/* <Link to="/app/viettelpost">Viettel Post Pages</Link> */}
         <Link to="/app/login">Login</Link>
-        <Link to="/app/test">Test</Link>
       </ui-nav-menu>
       <PolarisAppProvider
         i18n={polarisTranslations}
