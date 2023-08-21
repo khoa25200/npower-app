@@ -23,7 +23,8 @@ import {
   Form,
   useNavigate,
 } from "@remix-run/react";
-import { authenticate } from "../shopify.server";
+import { apiVersion, authenticate } from "../shopify.server";
+
 import { json, redirect } from "@remix-run/node";
 import { useCallback, useEffect, useState } from "react";
 import axios from "axios";
@@ -68,9 +69,9 @@ export const loader = async ({ request, params }) => {
   );
 
   return json({
-    order: responseJson.data.order,
-    shop: session.shop.replace(".myshopify.com", ""),
-    provinceResponse: provinceRes.data,
+    order: responseJson?.data?.order,
+    shop: session?.shop?.replace(".myshopify.com", ""),
+    provinceResponse: provinceRes?.data,
   });
 };
 
@@ -97,12 +98,20 @@ export async function action({ request, params }) {
     const receiveFullAddress = body.get("receiveFullAddress");
 
     const valueProductType = body.get("radioTypes") === "buukien" ? "HH" : "TH";
+    const productLength = body.get("productLength");
+    const productWidth = body.get("productWidth");
+    const productHeight = body.get("productHeight");
     const totalQuantity = body.get("totalQuantity");
     const totalWeight = body.get("totalWeight");
     const totalPrice = body.get("totalPrice");
     const productCollectionPrice = body.get("productCollectionPrice");
     const serviceMatch = body.get("serviceMatch");
     const productNote = body.get("productNote");
+    const productMainName = body.get("productMainName");
+    const productMainDes = body.get("productMainDes");
+    const collectionOptions = body.get("collectionOptions");
+
+    const listProductsItem = JSON.parse(body.get("listProductsItem"));
 
     if (_action === "CHECK_SERVICE") {
       const responseServiceList = await axios.post(
@@ -116,9 +125,9 @@ export async function action({ request, params }) {
           PRODUCT_WEIGHT: totalWeight,
           PRODUCT_PRICE: totalPrice,
           MONEY_COLLECTION: productCollectionPrice,
-          PRODUCT_LENGTH: 0,
-          PRODUCT_WIDTH: 0,
-          PRODUCT_HEIGHT: 0,
+          PRODUCT_LENGTH: productLength,
+          PRODUCT_WIDTH: productWidth,
+          PRODUCT_HEIGHT: productHeight,
           TYPE: 1,
         },
         {
@@ -144,9 +153,9 @@ export async function action({ request, params }) {
           SENDER_PROVINCE: senderProvince,
           RECEIVER_DISTRICT: receiveDistrict,
           RECEIVER_PROVINCE: receiveProvince,
-          PRODUCT_LENGTH: 0,
-          PRODUCT_WIDTH: 0,
-          PRODUCT_HEIGHT: 0,
+          PRODUCT_LENGTH: productLength,
+          PRODUCT_WIDTH: productWidth,
+          PRODUCT_HEIGHT: productHeight,
           PRODUCT_TYPE: valueProductType,
           NATIONAL_TYPE: 1,
         },
@@ -173,93 +182,45 @@ export async function action({ request, params }) {
 
         return formattedDate;
       }
-      // const rawData = {
-      //   ORDER_NUMBER: "12",
-      //   GROUPADDRESS_ID: 5818802,
-      //   CUS_ID: 722,
-      //   DELIVERY_DATE: "11/10/2018 15:09:52",
-      //   SENDER_FULLNAME: "Yanme Shop",
-      //   SENDER_ADDRESS:
-      //     "Số 5A ngách 22 ngõ 282 Kim Giang, Đại Kim, Hoàng Mai, Hà Nội",
-      //   SENDER_PHONE: "0967.363.789",
-      //   SENDER_EMAIL: "vanchinh.libra@gmail.com",
-      //   SENDER_DISTRICT: 4,
-      //   SENDER_PROVINCE: 1,
-      //   SENDER_LATITUDE: 0,
-      //   SENDER_LONGITUDE: 0,
-      //   RECEIVER_FULLNAME: "Hoàng - Test",
-      //   RECEIVER_ADDRESS: "1 NKKN P.Nguyễn Thái Bình, Quận 1, TP Hồ Chí Minh",
-      //   RECEIVER_PHONE: "0907882792",
-      //   RECEIVER_EMAIL: "hoangnh50@fpt.com.vn",
-      //   RECEIVER_PROVINCE: 34,
-      //   RECEIVER_DISTRICT: 390,
-      //   RECEIVER_WARDS: 7393,
-      //   RECEIVER_LATITUDE: 0,
-      //   RECEIVER_LONGITUDE: 0,
-      //   PRODUCT_NAME: "Máy xay sinh tố Philips HR2118 2.0L ",
-      //   PRODUCT_DESCRIPTION: "Máy xay sinh tố Philips HR2118 2.0L ",
-      //   PRODUCT_QUANTITY: 1,
-      //   PRODUCT_PRICE: 2292764,
-      //   PRODUCT_WEIGHT: 40000,
-      //   PRODUCT_LENGTH: 38,
-      //   PRODUCT_WIDTH: 24,
-      //   PRODUCT_HEIGHT: 25,
-      //   PRODUCT_TYPE: "HH",
-      //   ORDER_PAYMENT: 3,
-      //   ORDER_SERVICE: "VCBO",
-      //   ORDER_SERVICE_ADD: "",
-      //   ORDER_VOUCHER: "",
-      //   ORDER_NOTE: "cho xem hàng, không cho thử",
-      //   MONEY_COLLECTION: 2292764,
-      //   // "CHECK_UNIQUE": true,
-      //   LIST_ITEM: [
-      //     {
-      //       PRODUCT_NAME: "Máy xay sinh tố Philips HR2118 2.0L ",
-      //       PRODUCT_PRICE: 2150000,
-      //       PRODUCT_WEIGHT: 2500,
-      //       PRODUCT_QUANTITY: 1,
-      //     },
-      //   ],
-      // };
       const rawData = {
-        ORDER_NUMBER: params.orderId,
+        ORDER_NUMBER: "12",
         GROUPADDRESS_ID: 5818802,
-        // CUS_ID: 722,
-        DELIVERY_DATE: formatDateTime(new Date()),
-        SENDER_FULLNAME: senderName,
-        SENDER_ADDRESS: senderFullAdress,
-        SENDER_PHONE: senderPhone,
-        SENDER_EMAIL: senderEmail,
-        SENDER_DISTRICT: senderDistrict,
-        SENDER_PROVINCE: senderProvince,
-        SENDER_WARD: senderWard,
+        CUS_ID: 722,
+        DELIVERY_DATE: "11/10/2018 15:09:52",
+        SENDER_FULLNAME: "Yanme Shop",
+        SENDER_ADDRESS:
+          "Số 5A ngách 22 ngõ 282 Kim Giang, Đại Kim, Hoàng Mai, Hà Nội",
+        SENDER_PHONE: "0967.363.789",
+        SENDER_EMAIL: "vanchinh.libra@gmail.com",
+        SENDER_DISTRICT: 4,
+        SENDER_PROVINCE: 1,
         SENDER_LATITUDE: 0,
         SENDER_LONGITUDE: 0,
-        RECEIVER_FULLNAME: receiveName,
-        RECEIVER_ADDRESS: receiveFullAddress,
-        RECEIVER_PHONE: receivePhone,
-        RECEIVER_EMAIL: receiveEmail,
-        RECEIVER_PROVINCE: receiveProvince,
-        RECEIVER_DISTRICT: receiveDistrict,
-        RECEIVER_WARDS: receiveWard,
+        RECEIVER_FULLNAME: "Hoàng - Test",
+        RECEIVER_ADDRESS: "1 NKKN P.Nguyễn Thái Bình, Quận 1, TP Hồ Chí Minh",
+        RECEIVER_PHONE: "0907882792",
+        RECEIVER_EMAIL: "hoangnh50@fpt.com.vn",
+        RECEIVER_PROVINCE: 34,
+        RECEIVER_DISTRICT: 390,
+        RECEIVER_WARDS: 7393,
         RECEIVER_LATITUDE: 0,
         RECEIVER_LONGITUDE: 0,
         PRODUCT_NAME: "Máy xay sinh tố Philips HR2118 2.0L ",
         PRODUCT_DESCRIPTION: "Máy xay sinh tố Philips HR2118 2.0L ",
-        PRODUCT_QUANTITY: totalQuantity,
-        PRODUCT_PRICE: totalPrice,
-        PRODUCT_WEIGHT: totalWeight,
+        PRODUCT_QUANTITY: 1,
+        PRODUCT_PRICE: 2292764,
+        PRODUCT_WEIGHT: 40000,
         PRODUCT_LENGTH: 38,
         PRODUCT_WIDTH: 24,
         PRODUCT_HEIGHT: 25,
-        PRODUCT_TYPE: valueProductType,
+        PRODUCT_TYPE: "HH",
         ORDER_PAYMENT: 3,
-        ORDER_SERVICE: serviceMatch,
+        ORDER_SERVICE: "VCBO",
         ORDER_SERVICE_ADD: "",
         ORDER_VOUCHER: "",
-        ORDER_NOTE: productNote,
-        MONEY_COLLECTION: productCollectionPrice,
-        CHECK_UNIQUE: false,
+        ORDER_NOTE: "cho xem hàng, không cho thử",
+        MONEY_COLLECTION: 2292764,
+        // "CHECK_UNIQUE": true,
         LIST_ITEM: [
           {
             PRODUCT_NAME: "Máy xay sinh tố Philips HR2118 2.0L ",
@@ -269,7 +230,58 @@ export async function action({ request, params }) {
           },
         ],
       };
-
+      // const rawData = {
+      //   ORDER_NUMBER: params.orderId,
+      //   GROUPADDRESS_ID: 5818802,
+      //   // CUS_ID: 722,
+      //   DELIVERY_DATE: formatDateTime(new Date()),
+      //   SENDER_FULLNAME: senderName,
+      //   SENDER_ADDRESS: senderFullAdress,
+      //   SENDER_PHONE: senderPhone,
+      //   SENDER_EMAIL: senderEmail,
+      //   SENDER_DISTRICT: senderDistrict,
+      //   SENDER_PROVINCE: senderProvince,
+      //   SENDER_WARD: senderWard,
+      //   SENDER_LATITUDE: 0,
+      //   SENDER_LONGITUDE: 0,
+      //   RECEIVER_FULLNAME: receiveName,
+      //   RECEIVER_ADDRESS: receiveFullAddress,
+      //   RECEIVER_PHONE: receivePhone,
+      //   RECEIVER_EMAIL: receiveEmail,
+      //   RECEIVER_PROVINCE: receiveProvince,
+      //   RECEIVER_DISTRICT: receiveDistrict,
+      //   RECEIVER_WARDS: receiveWard,
+      //   RECEIVER_LATITUDE: 0,
+      //   RECEIVER_LONGITUDE: 0,
+      //   PRODUCT_NAME: productMainName || listProductsItem[0]?.name,
+      //   PRODUCT_DESCRIPTION: productMainDes,
+      //   PRODUCT_QUANTITY: totalQuantity,
+      //   PRODUCT_PRICE: totalPrice,
+      //   PRODUCT_WEIGHT: totalWeight,
+      //   PRODUCT_LENGTH: productLength,
+      //   PRODUCT_WIDTH: productWidth,
+      //   PRODUCT_HEIGHT: productHeight,
+      //   PRODUCT_TYPE: valueProductType,
+      //   ORDER_PAYMENT: Number(collectionOptions),
+      //   ORDER_SERVICE: serviceMatch,
+      //   ORDER_SERVICE_ADD: "",
+      //   ORDER_VOUCHER: "",
+      //   ORDER_NOTE: productNote,
+      //   MONEY_COLLECTION: productCollectionPrice,
+      //   CHECK_UNIQUE: false,
+      //   LIST_ITEM: listProductsItem?.map((product) => {
+      //     return {
+      //       PRODUCT_NAME: product?.name,
+      //       PRODUCT_PRICE: product?.price,
+      //       PRODUCT_WEIGHT: product?.weight,
+      //       PRODUCT_QUANTITY: product?.quan,
+      //     };
+      //   }),
+      // };
+      // const { session } = await authenticate.admin(request);
+      const { admin } = await authenticate.admin(request);
+      let status = "";
+      let responseAllSuccess = {};
       const dataAction = await axios
         .post("https://partner.viettelpost.vn/v2/order/createOrder", rawData, {
           headers: {
@@ -279,113 +291,59 @@ export async function action({ request, params }) {
           },
         })
         .then((res) => {
-          const graphqlUrl = `https://dangkhoa252001.myshopify.com/admin/api/2023-07/graphql.json`;
-          // const graphqlUrl = `https://dangkhoa2520.myshopify.com/admin/api/2023-07/graphql.json`;
-          const query = `
-                mutation {
-                  orderUpdate(input: {
-                    id: "gid://shopify/Order/${params.orderId}"
-                    note: "${res.data?.data?.ORDER_NUMBER}"
-                  }) {
-                    order {
-                      id
-                      note
-                    }
-                  }
-                }
-              `;
-
-          const headers = {
-            "X-Shopify-Access-Token": "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", //25202001
-            // "X-Shopify-Access-Token": "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",
-          };
-          const res2 = axios
-            .post(graphqlUrl, { query }, { headers })
-            .then(() => {
-              return res.data;
-            })
-            .catch((err) => {
-              return "lỗi req2";
-            });
-          return res.data;
+          const orderId = `gid://shopify/Order/${params.orderId}`;
+          const orderNote = res.data?.data?.ORDER_NUMBER.toString();
+          try {
+            udpateOrderNotes(orderId, orderNote);
+            status = "oke req2";
+            responseAllSuccess = res.data;
+            return res;
+          } catch (error) {
+            status = "not oke req2";
+            return "lỗi req2";
+          }
         })
-        .catch((err) => {
+        .catch(() => {
+          status = "not oke req1";
           return "lỗi req1";
         });
-
-      return dataAction;
+      return responseAllSuccess;
+      async function udpateOrderNotes(orderId, orderNote) {
+        try {
+          await admin.graphql(
+            `#graphql
+                mutation orderUpdate($orderId: ID!, $orderNote: String!) {
+                          orderUpdate(input: {
+                            id: $orderId
+                            note: $orderNote
+                          }) {
+                            order {
+                              id
+                              note
+                            }
+                          }
+                        }`,
+            {
+              variables: {
+                orderId,
+                orderNote,
+              },
+            }
+          );
+        } catch (error) {
+          return "lỗi req2";
+        }
+      }
+      return {
+        dataAction: "dataAction",
+      };
     } else {
       return "2";
     }
-    // if (_action === "LIKE") {
-    //   const rawData = {
-    //     ORDER_NUMBER: params.orderId + "1",
-    //     GROUPADDRESS_ID: 5818802,
-    //     CUS_ID: 722,
-    //     DELIVERY_DATE: "11/10/2018 15:09:52",
-    //     SENDER_FULLNAME: "Đăng Khoa",
-    //     SENDER_ADDRESS: "229/48 tây thạnh",
-    //     SENDER_PHONE: "0326123397",
-    //     SENDER_EMAIL: "dangkhoa@navitech.co",
-    //     SENDER_DISTRICT: 4,
-    //     SENDER_PROVINCE: 1,
-    //     SENDER_LATITUDE: 0,
-    //     SENDER_LONGITUDE: 0,
-    //     RECEIVER_FULLNAME: "Đăng Khoa- Test",
-    //     RECEIVER_ADDRESS: "1 NKKN P.Nguyễn Thái Bình, Quận 1, TP Hồ Chí Minh",
-    //     RECEIVER_PHONE: "0907882792",
-    //     RECEIVER_EMAIL: "hoangnh50@fpt.com.vn",
-    //     RECEIVER_PROVINCE: 34,
-    //     RECEIVER_DISTRICT: 390,
-    //     RECEIVER_WARDS: 7393,
-
-    //     RECEIVER_LATITUDE: 0,
-    //     RECEIVER_LONGITUDE: 0,
-    //     PRODUCT_NAME: "Máy xay sinh tố Philips HR2118 2.0L ",
-    //     PRODUCT_DESCRIPTION: "Máy xay sinh tố Philips HR2118 2.0L ",
-    //     PRODUCT_QUANTITY: 1,
-    //     PRODUCT_PRICE: 2292764,
-    //     PRODUCT_WEIGHT: 40000,
-    //     PRODUCT_LENGTH: 38,
-    //     PRODUCT_WIDTH: 24,
-    //     PRODUCT_HEIGHT: 25,
-    //     PRODUCT_TYPE: "HH",
-    //     ORDER_PAYMENT: 3,
-    //     ORDER_SERVICE: "VCBO",
-    //     ORDER_SERVICE_ADD: "",
-    //     ORDER_VOUCHER: "",
-    //     ORDER_NOTE: "cho xem hàng, không cho thử",
-    //     MONEY_COLLECTION: 2292764,
-    //     CHECK_UNIQUE: true,
-    //     LIST_ITEM: [
-    //       {
-    //         PRODUCT_NAME: "Máy xay sinh tố Philips HR2118 2.0L ",
-    //         PRODUCT_PRICE: 2150000,
-    //         PRODUCT_WEIGHT: 2500,
-    //         PRODUCT_QUANTITY: 1,
-    //       },
-    //     ],
-    //   };
-
-    //   const dataAction = await axios.post(
-    //     "https://partner.viettelpost.vn/v2/order/createOrder",
-    //     rawData,
-    //     {
-    //       headers: {
-    //         "Content-Type": "application/json",
-    //         Authorization: `Bearer ${process.env.API_TOKEN}`,
-    //         token:
-    //           "eyJhbGciOiJFUzI1NiJ9.eyJzdWIiOiIwMzI2MTIzMzk3IiwiVXNlcklkIjoxMzEzNTAyMCwiRnJvbVNvdXJjZSI6NSwiVG9rZW4iOiJPNjNZT1hDQ1ZLQk9SNEdOUEoiLCJleHAiOjE2OTIwODgxNTQsIlBhcnRuZXIiOjEzMTM1MDIwfQ.pI6w8JipwiiRV2UwkzvjwrpIW2xWzDMrYPFjAXsNAXoYLMvAaK7lW7-rLLgCqesRRUAoTFdz5ufyrglKiDuCUQ",
-    //       },
-    //     }
-    //   );
-    //   return dataAction.data;
-    // }
   } else {
     return "no token";
   }
 }
-
 
 export default function CreateViettelPost() {
   const dataAction = useActionData();
@@ -431,6 +389,26 @@ export default function CreateViettelPost() {
   const [selectedWardReceive, setSelectedWardReceive] = useState("1");
   const [optionsWardReceive, setOptionsWardReceive] = useState([]);
 
+  const [optionsCollection] = useState([
+    {
+      label: "Không thu hộ",
+      value: (1).toString(),
+    },
+    {
+      label: "Thu hộ tiền hàng và tiền cước",
+      value: (2).toString(),
+    },
+    {
+      label: "Thu hộ tiền hàng",
+      value: (3).toString(),
+    },
+    {
+      label: "Thu hộ tiền cước",
+      value: (4).toString(),
+    },
+  ]);
+  const [selectedCollection, setSelectedCollection] = useState("1");
+
   const [valueProductType, setValueProductType] = useState("buukien");
 
   const [listProductsItem, setListProductsItem] = useState([
@@ -444,6 +422,9 @@ export default function CreateViettelPost() {
   const [totalQuantity, setTotalQuantity] = useState(0);
   const [totalWeight, setTotalWeight] = useState(0);
   const [totalPrice, setTotalPrice] = useState(0);
+  const [totalLength, setTotalLength] = useState("");
+  const [totalWidth, setTotalWidth] = useState("");
+  const [totalHeight, setTotalHeight] = useState("");
   const [{ month, year }, setDate] = useState({
     month: new Date().getMonth(),
     year: new Date().getFullYear(),
@@ -494,7 +475,7 @@ export default function CreateViettelPost() {
           alert(`Tạo đơn #${dataAction?.data?.ORDER_NUMBER} Thành Công!!!`);
           navigate("/app");
         } else {
-          console.log(dataAction?.message);
+          console.log("lỗi");
         }
       }
     }
@@ -586,7 +567,6 @@ export default function CreateViettelPost() {
     getWardsReceiver().catch(console.error);
   }, [selectedDistrictReceive]);
 
-
   const handleSelectChangeProvinceSender = useCallback(
     (value) => setSelectedProvinceSender(value),
     []
@@ -615,6 +595,10 @@ export default function CreateViettelPost() {
     (value) => setSelectedServiceMatch(value),
     []
   );
+  const handleSelectChangeCollection = useCallback(
+    (value) => setSelectedCollection(value),
+    []
+  );
   const optionsProvince = provinceData.data?.map((value) => {
     return {
       label: value.PROVINCE_NAME,
@@ -626,7 +610,7 @@ export default function CreateViettelPost() {
   console.log("order==>", orders);
   const params = useParams();
   const orderId = params.orderId;
-  
+
   function formatDate(dateString) {
     const date = new Date(dateString);
     date.setHours(date.getHours() + 7); // Thêm 7 giờ để chuyển múi giờ
@@ -722,7 +706,7 @@ export default function CreateViettelPost() {
     PRODUCT_WIDTH: 0,
     PRODUCT_HEIGHT: 0,
     PRODUCT_TYPE: valueProductType === "tailieu" ? "TH" : "HH",
-    ORDER_PAYMENT: 3,
+    ORDER_PAYMENT: selectedCollection,
     ORDER_SERVICE: "VCBO",
     ORDER_SERVICE_ADD: "",
     ORDER_VOUCHER: "",
@@ -1045,7 +1029,11 @@ export default function CreateViettelPost() {
                     </>
                   );
                 })}
-
+                <input
+                  type="hidden"
+                  name="listProductsItem"
+                  value={JSON.stringify(listProductsItem)}
+                />
                 <Button
                   destructive
                   onClick={() => {
@@ -1108,6 +1096,46 @@ export default function CreateViettelPost() {
                     autoComplete="off"
                   />
                 </FormLayout.Group>
+                <FormLayout.Group title="Kích thước:">
+                  <TextField
+                    label="Dài:"
+                    placeholder="Dài(cm)"
+                    value={totalLength}
+                    onChange={(value) => {
+                      setTotalLength(value);
+                    }}
+                    name="productLength"
+                    autoComplete="off"
+                  />
+                  <TextField
+                    label="Rộng:"
+                    placeholder="Rộng(cm)"
+                    value={totalWidth}
+                    onChange={(value) => {
+                      setTotalWidth(value);
+                    }}
+                    name="productWidth"
+                    autoComplete="off"
+                  />
+                  <TextField
+                    label="Cao:"
+                    placeholder="Cao(cm)"
+                    value={totalHeight}
+                    onChange={(value) => {
+                      setTotalHeight(value);
+                    }}
+                    name="productHeight"
+                    autoComplete="off"
+                  />
+                </FormLayout.Group>
+                <Select
+                  label="Thu hộ:"
+                  options={optionsCollection}
+                  name="collectionOptions"
+                  onChange={handleSelectChangeCollection}
+                  value={selectedCollection}
+                />
+                <Divider />
                 <FormLayout.Group>
                   <TextField
                     label="Ghi Chú:"
